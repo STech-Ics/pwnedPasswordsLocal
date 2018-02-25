@@ -1,7 +1,9 @@
 pwnedPasswordsLocal
 ===================
 #### Search locally the DB downloaded from <https://haveibeenpwned.com/Passwords> for leaked passwords
+_CLI script_
 
+--------------------
 ## DB source :
 * <https://downloads.pwnedpasswords.com/passwords/pwned-passwords-2.0.txt.7z.torrent>
 * <https://downloads.pwnedpasswords.com/passwords/pwned-passwords-2.0.txt.7z>
@@ -20,13 +22,13 @@ pwnedPasswordsLocal
 ## Usage
 
 ### Requirements :
-* Python 3.6 and up
+* [Python 3.6](https://www.python.org/) and up
 * Windows / Linux / Mac
 * the .txt file with hashed passwords from above
 ### "Setup" :
-* copy the main script pwnedPasswords.py in a directory of your choice
-* optionally (but **recommended**), copy the second script intervals_dict.py in the same directory as the main script. The main script will run without it, but at first run it will build it and the process will take several minutes, depending on the hardware. If you will copy it, then you can skip updating it when you will be asked at the script first run.
-### Run the script :
+* copy the main script **pwnedPasswords.py** in a directory of your choice
+* optionally (but **_recommended_**), copy the second script **intervals_dict.py** in the same directory as the main script. The main script will run without it, but at first run it will build it and the process will take several minutes, depending on the hardware. If you will copy it, then you can skip updating it when you will be asked at the script first run.
+### Run the script in CLI :
 * Windows
 ```
 >> python c:\path\to\the\main\script
