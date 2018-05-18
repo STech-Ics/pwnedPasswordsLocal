@@ -7,8 +7,8 @@
 #
 # Author:       STech
 # Created:      24/02/2018
-# Modified:     15/04/2018
-# Version:      3.1.4.0345
+# Modified:     18/05/2018
+# Version:      3.1.5.0350
 # Python ver.:  3.6.2
 # Copyright:    (c) 2018
 # License:      <GPL v3>
@@ -37,7 +37,7 @@
 #===================================================================================================
 '''
 __author__    = 'STech'
-__version__   = '3.1.4.0345'
+__version__   = '3.1.5.0350'
 
 
 import sys
@@ -72,7 +72,7 @@ def main() -> None:
         return None
     while True:
         ## Passwords to find
-        (hash_dict, output_path, password_max_length) = userInput()
+        (hash_dict, output_path, password_padding) = userInput()
         if hash_dict.get('Q', 0) == 'Q':
             return None
         ## Connect to DB
@@ -171,17 +171,17 @@ def main() -> None:
                         result_dict[password] = 0
                     ## PRINT RESULTS
                     print(f'\nRESULTS:')
-                    print(f'{"Password":<{password_max_length}}   {"Hits":>10}')
+                    print(f'{"Password":<{password_padding}}   {"Hits":>10}')
                     checked_pass_num: int = 0
                     found_pass_num  : int = 0
                     for password, password_hits in result_dict.items():
-                        print(f'{password:<{password_max_length}} : {password_hits:>10}')
+                        print(f'{password:<{password_padding}} : {password_hits:>10}')
                         checked_pass_num += 1
                         if password_hits != 0:
                             found_pass_num += 1
                     print(f'\n{checked_pass_num} passwords checked: {found_pass_num if (found_pass_num > 0) else "Zero"} passwords found in DB.')
                     ## SAVE RESULTS
-                    if len(output_path):
+                    if output_path not in {'no_path', 'invalid_path'}:
                         try:
                             with open(output_path, 'w') as output_H:
                                 output_H.write('PASSWORD,HITS\n')
@@ -201,51 +201,86 @@ def main() -> None:
 
 ## MAIN END ---------------------------------------------------------------------------------------- -----
 
-def extractPathFromInput(uInput: str, access_mode: str = 'r', path_type: str = 'source==') -> str:
+def extractPathFromInput(uInput: str, access_mode: str = 'r',
+                         IO_type: str = 'source==', path_type: str = 'file',
+                         file_extensions: set = set()) -> str:
     '''
-    Extracts the path (source or output) from user input, defined by path_type
-    If path contains spaces than it must be enclosed in double quotes
-    :param uInput: [str] the user input string
-    :param access_mode [str] take the values 'r' for reading access mode OR 'w' for writing access mode (defaults to 'r')
-    :param path_type [str] can take usually values as 'source==' or 'output==' (defaults to 'source==')
-    :return: [str] the normalized and verified path or empty string if path does not exists/is not valid
+    Extracts the path (source or output) from user input, defined and found by IO_type string;
+    Source or Output can be a directory or a file;
+    If path contains spaces than it must be enclosed in double quotes.
+    :param uInput: [str] the user input string;
+    :param access_mode [str] take the values 'r' for reading access mode OR 'w' for writing access mode (defaults to 'r');
+    :param IO_type [str] can take usually values as 'source==' or 'output==', but it can take any value wanted by developer (defaults to 'source==');
+    :param path_type [str] can take value 'file' OR 'dir'; represents the path type (file or directory) of IO path given (defaults to 'file');
+    :param file_extensions [set of str] if is given, is a set of file extensions to check against the IO path given; it is used only if 'path_file' == 'file'; (defaults to empty set); e.g.: {'.csv', '.txt'}
+    :return: [str] the normalized and verified path,
+                   OR 'no_path' if IO_type wasn't found in input,
+                   OR 'invalid_path' if IO_type was found in input but the path wasn't validated
     '''
     # sanitize access mode
     if (access_mode not in {'r', 'w'}):
-        access_mode = 'r'
+        access_mode: str = 'r'
+    # sanitize path type
+    if path_type not in {'file', 'dir'}:
+        path_type: str = 'file'
     # path w/ spaces enclosed in double quotes
-    if path_type + '"' in uInput:
-        start_path_idx: int = uInput[uInput.find(path_type + '"') + 9:]
+    if IO_type + '"' in uInput:
+        start_path_idx: int = uInput[uInput.find(IO_type + '"') + len(IO_type) + 1:]
         end_path_idx: int = uInput[start_path_idx:].find('"') + start_path_idx
         path: str = os.path.normpath(uInput[start_path_idx:end_path_idx])
     # path w/o spaces
-    elif path_type in uInput:
-        path: str = os.path.normpath(uInput[uInput.find(path_type) + 8:].split(maxsplit=1)[0])
+    elif IO_type in uInput:
+        path: str = os.path.normpath(uInput[uInput.find(IO_type) + len(IO_type):].split(maxsplit=1)[0])
     # no path
     else:
-        return ''
+        return 'no_path'
     # check reading path
-    if access_mode == 'r' and os.path.isfile(path) and path[-4:] in {'.csv', '.txt'}:
-        return path
-    elif access_mode == 'w' and os.path.isdir(os.path.dirname(path)) and path[-4:] in {'.csv', '.txt'}:
-        return path
-    else:
-        return ''
+    if access_mode == 'r':
+        if path_type == 'file' and os.path.isfile(path):
+            # if set with file extensions is not empty
+            if file_extensions:
+                for extension in file_extensions:
+                    if path[-len(extension):].lower() == str(extension).lower():
+                        return path
+                else:
+                    return 'invalid_path'
+            # if set with extension is empty, don't check extensions and return path
+            else:
+                return path
+        elif path_type == 'dir' and os.path.isdir(path):
+            return path
+        else:
+            return 'invalid_path'
+    # check writing path
+    elif access_mode == 'w':
+        if path_type == 'file' and os.path.isdir(os.path.dirname(path)):
+            # if set with file extensions is not empty
+            if file_extensions:
+                for extension in file_extensions:
+                    if path[-len(extension):].lower() == str(extension).lower():
+                        return path
+                else:
+                    return 'invalid_path'
+            # if set with extension is empty, don't check extensions and return path
+            else:
+                return path
+        elif path_type == 'dir' and os.path.isdir(path):
+            return path
+        else:
+            return 'invalid_path'
 
-def eliminatePathsFromInput(uInput: str, source_path: str = '', output_path: str = '') -> str:
+def eliminatePathsFromInput(uInput: str, paths_dict: {str:str}) -> str:
     '''
-    Eliminates the source and/or the output paths from user input
+    Eliminates the paths from user input and replaces them with spaces.
+    Works only for VALID paths found previously.
     :param uInput: [str] the user input text
-    :param source_path: [str] the source path found in user input (defaults to empty string)
-    :param output_path: [str] the output path found in user input (defaults to empty string)
-    :return: [str] the user input without source/output paths
+    :param paths_dict: [dict with str] the sequence of IO type and Path pairs to be extracted from user input
+           (e.g. {'source==': 'file_path'} OR {'output==': 'dp'})
+    :return: [str] the user input without paths
     '''
-    # eliminate source path from user input
-    if len(source_path):
-        uInput = uInput[:uInput.find(source_path)-8].strip()+passwords_list_separator_C+uInput[uInput.find(source_path)+len(source_path):].strip()
-    # eliminate output path from user input
-    if len(output_path):
-        uInput = uInput[:uInput.find(output_path)-8].strip()+passwords_list_separator_C+uInput[uInput.find(output_path)+len(output_path):].strip()
+    if len(paths_dict):
+        for IO_type, path in paths_dict.items():
+            uInput = uInput[:uInput.find(path)-len(IO_type)].strip() + ' ' + uInput[uInput.find(path)+len(path):].strip()
     return uInput
 
 def userInput() -> ({str:str}, str, int):
@@ -257,13 +292,13 @@ def userInput() -> ({str:str}, str, int):
     print('\n----------------------------------------------------------------------------')
     print(f'\nInput passwords (separator: {passwords_list_separator_C} ; for Exit press \'Q\'):\n(usage: pass1{passwords_list_separator_C}pass2{passwords_list_separator_C}... [source==/file/with/passwords [output==/file/with/results]] | Q)')
     uInput: str = input('>> ')
-    source_path: str = extractPathFromInput(uInput, access_mode = 'r', path_type = 'source==')
-    output_path: str = extractPathFromInput(uInput, access_mode = 'w', path_type = 'output==')
-    password_max_length: int = 9
+    source_path: str = extractPathFromInput(uInput, access_mode = 'r', IO_type = 'source==')
+    output_path: str = extractPathFromInput(uInput, access_mode = 'w', IO_type = 'output==')
+    password_padding: int = 9
     if uInput.strip().upper() == 'Q' or not len(uInput):
         print('\nAbort by user.')
         return ({'Q':'Q'}, output_path, 0)
-    if source_path:
+    if source_path not in {'no_path', 'invalid_path'}:
         try:
             with open(source_path, 'r') as source_file_H:
                 # make the dictionary with hashed passwords
@@ -274,24 +309,24 @@ def userInput() -> ({str:str}, str, int):
                         line = line[:-1]
                     passwords_list.append(line)
                     # calculate length of password and save it as maximum length if it's the case
-                    if len(line) > password_max_length:
-                        password_max_length = len(line)
+                    if len(line) > password_padding:
+                        password_padding = len(line)
                 hash_dict: {str:str} = {hashlib.sha1(elem.encode()).hexdigest().upper():elem for elem in passwords_list}
-                return (hash_dict, output_path, password_max_length)
+                return (hash_dict, output_path, password_padding)
         except:
             print('\nSource file path could not be opened. Program will stop')
-            return ({'Q':'Q'}, output_path, password_max_length)
+            return ({'Q':'Q'}, output_path, password_padding)
     else:
         # eliminate source/output paths from user input
-        uInput = eliminatePathsFromInput(uInput, source_path, output_path)
+        uInput = eliminatePathsFromInput(uInput, paths_dict = {'source==': source_path, 'output==': output_path})
         # make the dictionary with hashed passwords
         passwords_list: [str] = uInput.split(sep=passwords_list_separator_C)
         # calculate length of password and save it as maximum length if it's the case
         for password in passwords_list:
-            if len(password) > password_max_length:
-                password_max_length = len(password)
+            if len(password) > password_padding:
+                password_padding = len(password)
         hash_dict: {str:str} = {hashlib.sha1(elem.encode()).hexdigest().upper():elem for elem in passwords_list}
-        return (hash_dict, output_path, password_max_length)
+        return (hash_dict, output_path, password_padding)
 
 def setValidDB() -> (str, str):
     '''
