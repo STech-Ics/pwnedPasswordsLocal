@@ -7,8 +7,8 @@
 #
 # Author:       STech
 # Created:      24/02/2018
-# Modified:     18/05/2018
-# Version:      3.1.5.0350
+# Modified:     07/07/2018
+# Version:      3.2.1.0376
 # Python ver.:  3.6.2
 # Copyright:    (c) 2018
 # License:      <GPL v3>
@@ -37,7 +37,8 @@
 #===================================================================================================
 '''
 __author__    = 'STech'
-__version__   = '3.1.5.0350'
+__version__   = '3.2.1.0376'
+__date__      = '1807070120'
 
 
 import sys
@@ -52,7 +53,7 @@ intervals_dict_fileName_C: str = 'intervals_dict.py'
 firstDBLine_prevalenceOrdered_C: str = '7C4A8D09CA3762AF61E59520943DC26494F8941B:20760336'
 firstDBLine_hashOrdered_C:       str = '000000005AD76BD555C1D6D771DE417A4B87E4B4:3'
 DB_lines_num_C:   int = 501636842
-line_bytes_num_C: int = 63         # the downloaded DB text file has Windows new line characters: '\r\n'
+line_bytes_num_C: int = 63         # the downloaded DB text file is ending in Windows new line characters: '\r\n'
 passwords_list_separator_C: str = '|__|'
 
 
@@ -73,7 +74,7 @@ def main() -> None:
     while True:
         ## Passwords to find
         (hash_dict, output_path, password_padding) = userInput()
-        if hash_dict.get('Q', 0) == 'Q':
+        if hash_dict.get('Q', '') == 'Q':
             return None
         ## Connect to DB
         while True:
@@ -172,6 +173,7 @@ def main() -> None:
                     ## PRINT RESULTS
                     print(f'\nRESULTS:')
                     print(f'{"Password":<{password_padding}}   {"Hits":>10}')
+                    print(f'{"-" * (password_padding + 3 + 10)}')
                     checked_pass_num: int = 0
                     found_pass_num  : int = 0
                     for password, password_hits in result_dict.items():
@@ -203,7 +205,8 @@ def main() -> None:
 
 def extractPathFromInput(uInput: str, access_mode: str = 'r',
                          IO_type: str = 'source==', path_type: str = 'file',
-                         file_extensions: set = set()) -> str:
+                         file_extensions: set = set()
+                         ) -> str:
     '''
     Extracts the path (source or output) from user input, defined and found by IO_type string;
     Source or Output can be a directory or a file;
@@ -280,7 +283,8 @@ def eliminatePathsFromInput(uInput: str, paths_dict: {str:str}) -> str:
     '''
     if len(paths_dict):
         for IO_type, path in paths_dict.items():
-            uInput = uInput[:uInput.find(path)-len(IO_type)].strip() + ' ' + uInput[uInput.find(path)+len(path):].strip()
+            if uInput.find(IO_type + path) != -1:
+                uInput = uInput[:uInput.find(IO_type + path)].strip() + ' ' + uInput[uInput.find(IO_type + path)+len(IO_type + path):].strip()
     return uInput
 
 def userInput() -> ({str:str}, str, int):
@@ -289,7 +293,7 @@ def userInput() -> ({str:str}, str, int):
     Hash algorithm = SHA1
     :return: [tuple of dict of str:str AND a str AND a int] dictionary with hashed passwords and plain text passwords pairs, AND the output path for results AND the maximum length of a password
     '''
-    print('\n----------------------------------------------------------------------------')
+    print('\n_____________________________________________________________________________')
     print(f'\nInput passwords (separator: {passwords_list_separator_C} ; for Exit press \'Q\'):\n(usage: pass1{passwords_list_separator_C}pass2{passwords_list_separator_C}... [source==/file/with/passwords [output==/file/with/results]] | Q)')
     uInput: str = input('>> ')
     source_path: str = extractPathFromInput(uInput, access_mode = 'r', IO_type = 'source==')
@@ -321,11 +325,10 @@ def userInput() -> ({str:str}, str, int):
         uInput = eliminatePathsFromInput(uInput, paths_dict = {'source==': source_path, 'output==': output_path})
         # make the dictionary with hashed passwords
         passwords_list: [str] = uInput.split(sep=passwords_list_separator_C)
-        # calculate length of password and save it as maximum length if it's the case
-        for password in passwords_list:
-            if len(password) > password_padding:
-                password_padding = len(password)
-        hash_dict: {str:str} = {hashlib.sha1(elem.encode()).hexdigest().upper():elem for elem in passwords_list}
+        # calculate length of the longest password and save it as maximum length (if it's the case) for text padding
+        password_padding = max(password_padding, max(map(len, passwords_list)))
+        ## Construct of dictionary with password hash and plain text password
+        hash_dict: {str:str} = {hashlib.sha1(passwd.encode()).hexdigest().upper():passwd for passwd in passwords_list}
         return (hash_dict, output_path, password_padding)
 
 def setValidDB() -> (str, str):
@@ -333,7 +336,6 @@ def setValidDB() -> (str, str):
     Sets the DB path
     :return: [tuple of str] valid DB path and the DB order type
     '''
-
     # vars to return
     DB_path: str = ''
     DB_order_type: str = ''
@@ -392,6 +394,7 @@ def setValidDB() -> (str, str):
                             return ('Q', 'Q')
                         # choice to keep the DB
                         elif userChoice.strip().lower() != 'n':
+                            print(f'DB set : {DB_path}  (Ordered by: {DB_order_type}).')
                             return (DB_path, DB_order_type)
                         else:
                             print('DB path reset:')
