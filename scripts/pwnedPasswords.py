@@ -8,7 +8,7 @@
 # Author:       STech
 # Created:      24/02/2018
 # Modified:     07/07/2018
-# Version:      3.2.1.0376
+# Version:      3.3.2.0390
 # Python ver.:  3.6.2
 # Copyright:    (c) 2018
 # License:      <GPL v3>
@@ -37,8 +37,8 @@
 #===================================================================================================
 '''
 __author__    = 'STech'
-__version__   = '3.2.1.0376'
-__date__      = '1807070120'
+__version__   = '3.3.2.0390'
+__date__      = '1807071535'
 
 
 import sys
@@ -272,21 +272,6 @@ def extractPathFromInput(uInput: str, access_mode: str = 'r',
         else:
             return 'invalid_path'
 
-def eliminatePathsFromInput(uInput: str, paths_dict: {str:str}) -> str:
-    '''
-    Eliminates the paths from user input and replaces them with spaces.
-    Works only for VALID paths found previously.
-    :param uInput: [str] the user input text
-    :param paths_dict: [dict with str] the sequence of IO type and Path pairs to be extracted from user input
-           (e.g. {'source==': 'file_path'} OR {'output==': 'dp'})
-    :return: [str] the user input without paths
-    '''
-    if len(paths_dict):
-        for IO_type, path in paths_dict.items():
-            if uInput.find(IO_type + path) != -1:
-                uInput = uInput[:uInput.find(IO_type + path)].strip() + ' ' + uInput[uInput.find(IO_type + path)+len(IO_type + path):].strip()
-    return uInput
-
 def userInput() -> ({str:str}, str, int):
     '''
     Takes passwords from user to be found in DB and creates a dictionary with passwords hashes
@@ -321,8 +306,6 @@ def userInput() -> ({str:str}, str, int):
             print('\nSource file path could not be opened. Program will stop')
             return ({'Q':'Q'}, output_path, password_padding)
     else:
-        # eliminate source/output paths from user input
-        uInput = eliminatePathsFromInput(uInput, paths_dict = {'source==': source_path, 'output==': output_path})
         # make the dictionary with hashed passwords
         passwords_list: [str] = uInput.split(sep=passwords_list_separator_C)
         # calculate length of the longest password and save it as maximum length (if it's the case) for text padding
