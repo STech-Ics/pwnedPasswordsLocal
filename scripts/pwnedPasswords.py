@@ -7,8 +7,8 @@
 #
 # Author:       STech
 # Created:      24/02/2018
-# Modified:     07/07/2018
-# Version:      3.3.2.0390
+# Modified:     19/08/2018
+# Version:      3.4.1.0416
 # Python ver.:  3.6.2
 # Copyright:    (c) 2018
 # License:      <GPL v3>
@@ -37,8 +37,8 @@
 #===================================================================================================
 '''
 __author__    = 'STech'
-__version__   = '3.3.2.0390'
-__date__      = '1807071535'
+__version__   = '3.4.1.0416'
+__date__      = '1808192016'
 
 
 import sys
@@ -186,9 +186,9 @@ def main() -> None:
                     if output_path not in {'no_path', 'invalid_path'}:
                         try:
                             with open(output_path, 'w') as output_H:
-                                output_H.write('PASSWORD,HITS\n')
+                                output_H.write(f'{"PASSWORD":<{password_padding}} : {"HITS":>10}\n')
                                 for password, password_hits in result_dict.items():
-                                    output_H.write(f'{password},{password_hits}\n')
+                                    output_H.write(f'{password:<{password_padding}} : {password_hits:>10}\n')
                                 output_H.write(f'\n{checked_pass_num} passwords checked: {found_pass_num if (found_pass_num > 0) else "Zero"} passwords found in DB.\n')
                             print(f'\nFile {output_path} saved successfully.')
                         except:
@@ -204,8 +204,7 @@ def main() -> None:
 ## MAIN END ---------------------------------------------------------------------------------------- -----
 
 def extractPathFromInput(uInput: str, access_mode: str = 'r',
-                         IO_type: str = 'source==', path_type: str = 'file',
-                         file_extensions: set = set()
+                         IO_type: str = 'source==', path_type: str = 'file'
                          ) -> str:
     '''
     Extracts the path (source or output) from user input, defined and found by IO_type string;
@@ -215,7 +214,6 @@ def extractPathFromInput(uInput: str, access_mode: str = 'r',
     :param access_mode [str] take the values 'r' for reading access mode OR 'w' for writing access mode (defaults to 'r');
     :param IO_type [str] can take usually values as 'source==' or 'output==', but it can take any value wanted by developer (defaults to 'source==');
     :param path_type [str] can take value 'file' OR 'dir'; represents the path type (file or directory) of IO path given (defaults to 'file');
-    :param file_extensions [set of str] if is given, is a set of file extensions to check against the IO path given; it is used only if 'path_file' == 'file'; (defaults to empty set); e.g.: {'.csv', '.txt'}
     :return: [str] the normalized and verified path,
                    OR 'no_path' if IO_type wasn't found in input,
                    OR 'invalid_path' if IO_type was found in input but the path wasn't validated
@@ -240,16 +238,7 @@ def extractPathFromInput(uInput: str, access_mode: str = 'r',
     # check reading path
     if access_mode == 'r':
         if path_type == 'file' and os.path.isfile(path):
-            # if set with file extensions is not empty
-            if file_extensions:
-                for extension in file_extensions:
-                    if path[-len(extension):].lower() == str(extension).lower():
-                        return path
-                else:
-                    return 'invalid_path'
-            # if set with extension is empty, don't check extensions and return path
-            else:
-                return path
+            return path
         elif path_type == 'dir' and os.path.isdir(path):
             return path
         else:
@@ -257,16 +246,7 @@ def extractPathFromInput(uInput: str, access_mode: str = 'r',
     # check writing path
     elif access_mode == 'w':
         if path_type == 'file' and os.path.isdir(os.path.dirname(path)):
-            # if set with file extensions is not empty
-            if file_extensions:
-                for extension in file_extensions:
-                    if path[-len(extension):].lower() == str(extension).lower():
-                        return path
-                else:
-                    return 'invalid_path'
-            # if set with extension is empty, don't check extensions and return path
-            else:
-                return path
+            return path
         elif path_type == 'dir' and os.path.isdir(path):
             return path
         else:
@@ -279,10 +259,10 @@ def userInput() -> ({str:str}, str, int):
     :return: [tuple of dict of str:str AND a str AND a int] dictionary with hashed passwords and plain text passwords pairs, AND the output path for results AND the maximum length of a password
     '''
     print('\n_____________________________________________________________________________')
-    print(f'\nInput passwords (separator: {passwords_list_separator_C} ; for Exit press \'Q\'):\n(usage: pass1{passwords_list_separator_C}pass2{passwords_list_separator_C}... [source==/file/with/passwords [output==/file/with/results]] | Q)')
+    print(f'\nInput passwords (separator: {passwords_list_separator_C} ; for Exit press \'Q\'):\n(usage: pass1{passwords_list_separator_C}pass2{passwords_list_separator_C}... [src==/file/with/passwords [dst==/file/with/results]] | Q)')
     uInput: str = input('>> ')
-    source_path: str = extractPathFromInput(uInput, access_mode = 'r', IO_type = 'source==')
-    output_path: str = extractPathFromInput(uInput, access_mode = 'w', IO_type = 'output==')
+    source_path: str = extractPathFromInput(uInput, access_mode = 'r', IO_type = 'src==')
+    output_path: str = extractPathFromInput(uInput, access_mode = 'w', IO_type = 'dst==')
     password_padding: int = 9
     if uInput.strip().upper() == 'Q' or not len(uInput):
         print('\nAbort by user.')
